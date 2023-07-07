@@ -52,6 +52,7 @@ pub struct Writer {
     buffer: &'static mut Buffer,
 }
 
+#[allow(dead_code)]
 impl Writer {
     pub fn set_bg_color(&mut self, color: Color) {
         self.color_code = ColorCode((color as u8) << 4 | (self.color_code.0 as u8) & 0x0f)
@@ -59,6 +60,14 @@ impl Writer {
 
     pub fn set_fg_color(&mut self, color: Color) {
         self.color_code = ColorCode((self.color_code.0 as u8) & 0xf0 | (color as u8))
+    }
+
+    pub fn get_color_code(&mut self) -> u8 {
+        self.color_code.0
+    }
+
+    pub fn reset_color_code(&mut self, code: u8) {
+        self.color_code.0 = code;
     }
 
     pub fn write_byte(&mut self, byte: u8) {
@@ -82,7 +91,19 @@ impl Writer {
         }
     }
 
-    fn new_line(&mut self) {/* TODO */}
+    fn new_line(&mut self) {
+        let old_color = self.get_color_code();
+        let mut line_num = 0;
+        while line_num < (BUFFER_HEIGHT - 1) {
+            let old_line = self.buffer.chars[line_num+1];
+            self.buffer.chars[line_num].copy_from_slice(&old_line);
+            line_num += 1;
+        }
+        let blank = ScreenChar { ascii_character: b' ', color_code: ColorCode(old_color) };
+        self.buffer.chars[BUFFER_HEIGHT - 1].fill(blank);
+        self.column_position = 0;
+        self.reset_color_code(old_color);
+    }
 }
 
 impl Writer {
@@ -106,9 +127,11 @@ pub fn print_something() {
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     };
 
-    writer.write_byte(b'H');
     writer.set_fg_color(Color::Yellow);
-    writer.write_string("ello ");
-    writer.set_bg_color(Color::Red);
-    writer.write_string("Wörld!");
+    writer.write_string("1: Hello World!\n");
+    writer.set_bg_color(Color::Yellow);
+    writer.set_fg_color(Color::Green);
+    writer.write_string("2: New line\n");
+    writer.set_bg_color(Color::Blue);
+    writer.write_string("3: Really Really Long Line that Would Extend past the end of the screen boundary of 80 columns");
 }
