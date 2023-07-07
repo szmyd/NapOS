@@ -53,6 +53,14 @@ pub struct Writer {
 }
 
 impl Writer {
+    pub fn set_bg_color(&mut self, color: Color) {
+        self.color_code = ColorCode((color as u8) << 4 | (self.color_code.0 as u8) & 0x0f)
+    }
+
+    pub fn set_fg_color(&mut self, color: Color) {
+        self.color_code = ColorCode((self.color_code.0 as u8) & 0xf0 | (color as u8))
+    }
+
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
             b'\n' => self.new_line(),
@@ -94,11 +102,13 @@ impl Writer {
 pub fn print_something() {
     let mut writer = Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
+        color_code: ColorCode::new(Color::White, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     };
 
     writer.write_byte(b'H');
+    writer.set_fg_color(Color::Yellow);
     writer.write_string("ello ");
+    writer.set_bg_color(Color::Red);
     writer.write_string("Wörld!");
 }
