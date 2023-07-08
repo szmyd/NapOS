@@ -1,3 +1,4 @@
+use core::fmt;
 use lazy_static::lazy_static;
 use spin;
 
@@ -138,4 +139,11 @@ lazy_static! {
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });
+}
+
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_string(s);
+        Ok(())
+    }
 }
