@@ -1,3 +1,6 @@
+use lazy_static::lazy_static;
+use spin;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -51,7 +54,6 @@ pub struct Writer {
     buffer: &'static mut Buffer,
 }
 
-#[allow(dead_code)]
 impl Writer {
     pub fn set_bg_color(&mut self, color: Color) {
         self.color_code = ColorCode((color as u8) << 4 | (self.color_code.0 as u8) & 0x0f)
@@ -65,8 +67,8 @@ impl Writer {
         self.color_code.0
     }
 
-    pub fn reset_color_code(&mut self, code: u8) {
-        self.color_code.0 = code;
+    pub fn get_height() -> usize {
+        BUFFER_HEIGHT
     }
 
     pub fn write_byte(&mut self, byte: u8) {
@@ -117,9 +119,7 @@ impl Writer {
         self.fill_line(BUFFER_HEIGHT - 1, b' ');
         self.column_position = 0;
     }
-}
 
-impl Writer {
     pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
             match byte {
@@ -132,23 +132,10 @@ impl Writer {
     }
 }
 
-pub fn draw_bootscreen() {
-    let mut writer = Writer {
+lazy_static! {
+    pub static ref WRITER: spin::Mutex<Writer> = spin::Mutex::new(Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::White, Color::Black),
+        color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-
-    writer.clear_screen();
-    writer.set_bg_color(Color::DarkGrey);
-    writer.write_string("rustOS [v0.0.1]                                                                ");
-    writer.set_bg_color(Color::Black);
-    let mut line_num = 1;
-    while line_num < BUFFER_HEIGHT {
-        writer.write_string("\n");
-        line_num += 1;
-    }
-    writer.set_bg_color(Color::DarkGrey);
-    writer.set_fg_color(Color::Yellow);
-    writer.write_string("                            Copyright (c) 2023 Brian Szmyd, All rights reserved.");
+    });
 }
