@@ -2,6 +2,7 @@
 #![no_std]
 #![no_main]
 
+mod console;
 mod vga_buffer;
 
 use core::panic::PanicInfo;
@@ -18,20 +19,43 @@ pub extern "C" fn _start() -> ! {
 }
 
 pub fn draw_bootscreen() {
-    use core::fmt::Write;
-    use vga_buffer::Color;
-    let mut writer = vga_buffer::WRITER.lock();
+    let mut console = console::Console {
+        windows: [
+            console::Window {
+                top: 0,
+                cur: 0,
+                bg_color: vga_buffer::Color::DarkGrey,
+                fg_color: vga_buffer::Color::White,
+            },
+            console::Window {
+                top: 1,
+                cur: 0,
+                bg_color: vga_buffer::Color::Black,
+                fg_color: vga_buffer::Color::Cyan,
+            },
+            console::Window {
+                top: 21,
+                cur: 0,
+                bg_color: vga_buffer::Color::DarkGrey,
+                fg_color: vga_buffer::Color::Yellow,
+            },
+        ],
+    };
 
-    writer.clear_screen();
-    writer.set_bg_color(Color::DarkGrey);
-    write!(writer, "rustOS [v0.0.1]                                                                 ").unwrap();
-    writer.set_bg_color(Color::Black);
+    console.clear_window(0);
+    console.write_string(
+        0,
+        "rustOS [v0.0.1]                                                                 ",
+    );
+
     let mut line_num = 1;
     while line_num < vga_buffer::Writer::get_height() {
-        writeln!(writer, "").unwrap();
+        console.write_string(1, "\n");
         line_num += 1;
     }
-    writer.set_bg_color(Color::DarkGrey);
-    writer.set_fg_color(Color::Yellow);
-    write!(writer, "                            Copyright (c) 2023 Brian Szmyd, All rights reserved.").unwrap();
+
+    console.write_string(
+        2,
+        "                            Copyright (c) 2023 Brian Szmyd, All rights reserved.",
+    );
 }
