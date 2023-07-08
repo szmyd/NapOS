@@ -10,7 +10,7 @@ checksum = "b6e02311b16c9819e7c72866d379cdd3026c3b7b25c1edf161f548f8e887e7ff"
 
 [[package]]
 name = "rustos"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "bootloader",
 ]
