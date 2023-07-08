@@ -13,7 +13,7 @@ fn panic(_: &PanicInfo) -> ! {
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    vga_buffer::print_something();
+    vga_buffer::draw_bootscreen();
     loop {}
 }
 

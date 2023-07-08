@@ -9,8 +9,8 @@ pub enum Color {
     Red = 4,
     Magenta = 5,
     Brown = 6,
-    LightGray = 7,
-    DarkGray = 8,
+    LightGrey = 7,
+    DarkGrey = 8,
     LightBlue = 9,
     LightGreen = 10,
     LightCyan = 11,
@@ -29,7 +29,6 @@ impl ColorCode {
         ColorCode((background as u8) << 4 | (foreground as u8))
     }
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
@@ -91,18 +90,32 @@ impl Writer {
         }
     }
 
-    fn new_line(&mut self) {
-        let old_color = self.get_color_code();
+    pub fn clear_screen(&mut self) {
         let mut line_num = 0;
-        while line_num < (BUFFER_HEIGHT - 1) {
-            let old_line = self.buffer.chars[line_num+1];
-            self.buffer.chars[line_num].copy_from_slice(&old_line);
+        while line_num < BUFFER_HEIGHT {
+            self.fill_line(line_num, b' ');
             line_num += 1;
         }
-        let blank = ScreenChar { ascii_character: b' ', color_code: ColorCode(old_color) };
-        self.buffer.chars[BUFFER_HEIGHT - 1].fill(blank);
+    }
+
+    fn fill_line(&mut self, line_num: usize, byte: u8) {
+        let old_color = self.get_color_code();
+        let character = ScreenChar {
+            ascii_character: byte,
+            color_code: ColorCode(old_color),
+        };
+        self.buffer.chars[line_num].fill(character);
+    }
+
+    fn new_line(&mut self) {
+        let mut line_num = 1;
+        while line_num < BUFFER_HEIGHT {
+            let (dest, src) = self.buffer.chars.split_at_mut(line_num);
+            dest.last_mut().unwrap().copy_from_slice(&src[0]);
+            line_num += 1;
+        }
+        self.fill_line(BUFFER_HEIGHT - 1, b' ');
         self.column_position = 0;
-        self.reset_color_code(old_color);
     }
 }
 
@@ -115,23 +128,27 @@ impl Writer {
                 // not part of printable ASCII range
                 _ => self.write_byte(0xfe),
             }
-
         }
     }
 }
 
-pub fn print_something() {
+pub fn draw_bootscreen() {
     let mut writer = Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::White, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     };
 
+    writer.clear_screen();
+    writer.set_bg_color(Color::DarkGrey);
+    writer.write_string("rustOS [v0.0.1]                                                                ");
+    writer.set_bg_color(Color::Black);
+    let mut line_num = 1;
+    while line_num < BUFFER_HEIGHT {
+        writer.write_string("\n");
+        line_num += 1;
+    }
+    writer.set_bg_color(Color::DarkGrey);
     writer.set_fg_color(Color::Yellow);
-    writer.write_string("1: Hello World!\n");
-    writer.set_bg_color(Color::Yellow);
-    writer.set_fg_color(Color::Green);
-    writer.write_string("2: New line\n");
-    writer.set_bg_color(Color::Blue);
-    writer.write_string("3: Really Really Long Line that Would Extend past the end of the screen boundary of 80 columns");
+    writer.write_string("                            Copyright (c) 2023 Brian Szmyd, All rights reserved.");
 }
