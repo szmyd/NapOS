@@ -1,3 +1,6 @@
+use lazy_static::lazy_static;
+use spin;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -51,7 +54,6 @@ pub struct Writer {
     buffer: &'static mut Buffer,
 }
 
-#[allow(dead_code)]
 impl Writer {
     pub fn set_bg_color(&mut self, color: Color) {
         self.color_code = ColorCode((color as u8) << 4 | (self.color_code.0 as u8) & 0x0f)
@@ -65,34 +67,35 @@ impl Writer {
         self.color_code.0
     }
 
-    pub fn reset_color_code(&mut self, code: u8) {
-        self.color_code.0 = code;
-    }
-
-    pub fn write_byte(&mut self, byte: u8) {
+    pub fn write_byte(&mut self, top: usize, height: usize, col: usize, byte: u8) -> usize {
+        let mut new_col = col;
         match byte {
-            b'\n' => self.new_line(),
+            b'\r' => 0,
+            b'\n' => {
+                self.new_line(top, height);
+                0
+            }
             byte => {
-                if self.column_position >= BUFFER_WIDTH {
-                    self.new_line();
+                if new_col >= BUFFER_WIDTH {
+                    self.new_line(top, height);
+                    new_col = 0;
                 }
 
-                let row = BUFFER_HEIGHT - 1;
-                let col = self.column_position;
-
+                let row = top + (height - 1);
                 let color_code = self.color_code;
-                self.buffer.chars[row][col] = ScreenChar {
+
+                self.buffer.chars[row][new_col] = ScreenChar {
                     ascii_character: byte,
                     color_code,
                 };
-                self.column_position += 1;
+                new_col + 1
             }
         }
     }
 
-    pub fn clear_screen(&mut self) {
-        let mut line_num = 0;
-        while line_num < BUFFER_HEIGHT {
+    pub fn clear_screen(&mut self, top: usize, height: usize) {
+        let mut line_num = top;
+        while line_num < (top + height) {
             self.fill_line(line_num, b' ');
             line_num += 1;
         }
@@ -107,48 +110,36 @@ impl Writer {
         self.buffer.chars[line_num].fill(character);
     }
 
-    fn new_line(&mut self) {
-        let mut line_num = 1;
-        while line_num < BUFFER_HEIGHT {
+    fn new_line(&mut self, top: usize, height: usize) {
+        let last_line = top + height;
+        let mut line_num = top + 1;
+        while line_num < last_line {
             let (dest, src) = self.buffer.chars.split_at_mut(line_num);
             dest.last_mut().unwrap().copy_from_slice(&src[0]);
             line_num += 1;
         }
-        self.fill_line(BUFFER_HEIGHT - 1, b' ');
+        self.fill_line(last_line - 1, b' ');
         self.column_position = 0;
     }
-}
 
-impl Writer {
-    pub fn write_string(&mut self, s: &str) {
+    pub fn write_string(&mut self, top: usize, height: usize, col: usize, s: &str) -> usize {
+        let mut new_col = col;
         for byte in s.bytes() {
-            match byte {
+            new_col = match byte {
                 // printable ASCII byte or newline
-                0x20..=0x7e | b'\n' => self.write_byte(byte),
+                0x20..=0x7e | b'\n' => self.write_byte(top, height, new_col, byte),
                 // not part of printable ASCII range
-                _ => self.write_byte(0xfe),
+                _ => self.write_byte(top, height, new_col, 0xfe),
             }
         }
+        new_col
     }
 }
 
-pub fn draw_bootscreen() {
-    let mut writer = Writer {
+lazy_static! {
+    pub static ref WRITER: spin::Mutex<Writer> = spin::Mutex::new(Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::White, Color::Black),
+        color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-
-    writer.clear_screen();
-    writer.set_bg_color(Color::DarkGrey);
-    writer.write_string("rustOS [v0.0.1]                                                                ");
-    writer.set_bg_color(Color::Black);
-    let mut line_num = 1;
-    while line_num < BUFFER_HEIGHT {
-        writer.write_string("\n");
-        line_num += 1;
-    }
-    writer.set_bg_color(Color::DarkGrey);
-    writer.set_fg_color(Color::Yellow);
-    writer.write_string("                            Copyright (c) 2023 Brian Szmyd, All rights reserved.");
+    });
 }
