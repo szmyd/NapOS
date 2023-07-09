@@ -1,21 +1,37 @@
-// No Standard Library and no c-runtime
 #![no_std]
 #![no_main]
-
-mod console;
-mod vga_buffer;
+#![feature(custom_test_frameworks)]
+#![test_runner(rustos::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
+use rustos::console;
+use rustos::vga_buffer;
 
 #[panic_handler]
-fn panic(_: &PanicInfo) -> ! {
+#[cfg(not(test))]
+fn panic(info: &PanicInfo) -> ! {
+    {
+        let mut console = console::CONSOLE.lock();
+        console.set_fg_color(1, vga_buffer::Color::Red);
+    }
+    rustos::println!("\n{}", info);
     loop {}
+}
+
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    rustos::test_panic_handler(info)
 }
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     draw_bootscreen();
-    print!("Hello World{}", "!");
+
+    #[cfg(test)]
+    test_main();
+
     loop {}
 }
 
