@@ -1,3 +1,5 @@
-# An OS implemented in Rust
+# Because POSIX is Ugly!
 
-This will begin as a follow-thru of [BlogOS](https://os.phil-opp.com) and continue on to something else.
+## NapOS (Not another POSIX OS).
+
+Copyright (c) 2023 Brian Szmyd, All rights reserved.

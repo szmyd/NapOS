@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(rustos::test_runner)]
+#![test_runner(napos::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
@@ -15,10 +15,10 @@ pub extern "C" fn _start() -> ! {
 
 #[test_case]
 fn test_println() {
-    rustos::println!("test_println output");
+    napos::println!("test_println output");
 }
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    rustos::test_panic_handler(info)
+    napos::test_panic_handler(info)
 }

@@ -6,9 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 0.0.1
+## [v0.1.0]
 
+### Added
+- VGA FB and Console
+- Serial (16550) support
+- Testing framework
+
+### Changed
+- Renamed to "NapOS" (Not Another POSIX OS)
+
+## v0.0.1
+
+### Added
 - Freestanding Binary
 - Hello, World!
 
-[Unreleased]: https://github.com/szmyd/rustos/compare/0.0.1...HEAD
+[Unreleased]: https://github.com/szmyd/napos/compare/v0.1.0...HEAD
+[v0.1.0]: https://github.com/szmyd/napos/compare/v0.0.1...v0.1.0
