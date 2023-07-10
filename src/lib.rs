@@ -1,10 +1,12 @@
 #![no_std]
 #![cfg_attr(test, no_main)]
+#![feature(abi_x86_interrupt)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 pub mod console;
+pub mod interrupts;
 pub mod serial;
 pub mod vga_buffer;
 
@@ -20,7 +22,19 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_print!("failed!");
     serial_println!("\n{}", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    hlt_loop();
+}
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
+}
+
+pub fn init() {
+    interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,7 +72,7 @@ where
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     test_main();
-    loop {}
+    hlt_loop();
 }
 
 pub fn test_runner(tests: &[&dyn Testable]) {

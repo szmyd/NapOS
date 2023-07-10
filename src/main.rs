@@ -6,17 +6,19 @@
 
 use core::panic::PanicInfo;
 use napos::console;
-use napos::vga_buffer;
+use napos::vga_buffer::Color;
+use napos::println;
+use napos::print;
 
 #[panic_handler]
 #[cfg(not(test))]
 fn panic(info: &PanicInfo) -> ! {
     {
         let mut console = console::CONSOLE.lock();
-        console.set_fg_color(1, vga_buffer::Color::Red);
+        console.set_fg_color(1, Color::Red);
     }
-    napos::println!("\n{}", info);
-    loop {}
+    println!("\n{}", info);
+    napos::hlt_loop();
 }
 
 #[cfg(test)]
@@ -27,25 +29,27 @@ fn panic(info: &PanicInfo) -> ! {
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    napos::init();
     draw_bootscreen();
 
     #[cfg(test)]
     test_main();
 
-    loop {}
+    print!("Starting NapOS...");
+    napos::hlt_loop();
 }
 
 pub fn draw_bootscreen() {
     let mut console = console::CONSOLE.lock();
-    console.set_bg_color(0, vga_buffer::Color::DarkGrey);
-    console.set_fg_color(0, vga_buffer::Color::White);
+    console.set_bg_color(0, Color::DarkGrey);
+    console.set_fg_color(0, Color::White);
     console.clear_window(0);
     console.write_string(0, "NapOS [v0.0.2]");
-    console.set_bg_color(1, vga_buffer::Color::Black);
-    console.set_fg_color(1, vga_buffer::Color::Cyan);
+    console.set_bg_color(1, Color::Black);
+    console.set_fg_color(1, Color::Cyan);
     console.clear_window(1);
-    console.set_bg_color(2, vga_buffer::Color::DarkGrey);
-    console.set_fg_color(2, vga_buffer::Color::Yellow);
+    console.set_bg_color(2, Color::DarkGrey);
+    console.set_fg_color(2, Color::Yellow);
     console.write_string(
         2,
         "                            Copyright (c) 2023 Brian Szmyd, All rights reserved.",
