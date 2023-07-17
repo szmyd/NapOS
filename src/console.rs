@@ -15,6 +15,7 @@ struct Window {
 #[derive(Debug)]
 pub struct Console {
     windows: [Window; 3],
+    cur_window: usize,
 }
 
 #[allow(dead_code)]
@@ -27,6 +28,11 @@ impl Console {
     pub fn set_fg_color(&mut self, window_idx: usize, color: vga_buffer::Color) {
         let window = &mut self.windows[window_idx];
         window.fg_color = color;
+    }
+
+    pub fn set_window(&mut self, window_idx: usize) -> &mut Console {
+        self.cur_window = window_idx;
+        self
     }
 
     pub fn clear_window(&mut self, window_idx: usize) {
@@ -72,19 +78,20 @@ lazy_static! {
                 fg_color: vga_buffer::Color::White,
             },
         ],
+        cur_window: 1,
     });
 }
 
 impl fmt::Write for Console {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_string(1, s);
+        self.write_string(self.cur_window, s);
         Ok(())
     }
 }
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::console::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::console::_print(1, format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -93,12 +100,22 @@ macro_rules! println {
     ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
+#[macro_export]
+macro_rules! announce {
+    ($($arg:tt)*) => ($crate::console::_print(0, format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! subtext {
+    ($($arg:tt)*) => ($crate::console::_print(2, format_args!($($arg)*)));
+}
+
 #[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
+pub fn _print(window: usize, args: fmt::Arguments) {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;
     interrupts::without_interrupts(|| {
-        CONSOLE.lock().write_fmt(args).unwrap();
+        CONSOLE.lock().set_window(window).write_fmt(args).unwrap();
     });
 }
 

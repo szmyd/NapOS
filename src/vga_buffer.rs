@@ -49,7 +49,6 @@ struct Buffer {
 }
 
 pub struct Writer {
-    column_position: usize,
     color_code: ColorCode,
     buffer: &'static mut Buffer,
 }
@@ -69,6 +68,7 @@ impl Writer {
 
     pub fn write_byte(&mut self, top: usize, height: usize, col: usize, byte: u8) -> usize {
         let mut new_col = col;
+        let color_code = self.color_code;
         match byte {
             b'\r' => 0,
             b'\n' => {
@@ -82,7 +82,6 @@ impl Writer {
                 }
 
                 let row = top + (height - 1);
-                let color_code = self.color_code;
 
                 self.buffer.chars[row][new_col] = ScreenChar {
                     ascii_character: byte,
@@ -119,7 +118,6 @@ impl Writer {
             line_num += 1;
         }
         self.fill_line(last_line - 1, b' ');
-        self.column_position = 0;
     }
 
     pub fn write_string(&mut self, top: usize, height: usize, col: usize, s: &str) -> usize {
@@ -128,6 +126,7 @@ impl Writer {
             new_col = match byte {
                 // printable ASCII byte or newline
                 0x20..=0x7e | b'\n' => self.write_byte(top, height, new_col, byte),
+                b'\r' => 0,
                 // not part of printable ASCII range
                 _ => self.write_byte(top, height, new_col, 0xfe),
             }
@@ -138,7 +137,6 @@ impl Writer {
 
 lazy_static! {
     pub static ref WRITER: spin::Mutex<Writer> = spin::Mutex::new(Writer {
-        column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });

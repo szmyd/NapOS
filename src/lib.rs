@@ -32,9 +32,39 @@ pub fn hlt_loop() -> ! {
 }
 
 pub fn init() {
+    use x86_64::instructions::port::Port;
+    println!("Starting NapOS...");
+
+    print!("Initializing Interrupts.");
     interrupts::init_idt();
+    print!(".");
     unsafe { interrupts::PICS.lock().initialize() };
+    print!(".");
     x86_64::instructions::interrupts::enable();
+    println!("done.");
+
+    print!("Initializing RTC.");
+    x86_64::instructions::interrupts::without_interrupts(|| unsafe {
+        print!(".");
+        let mut rtc_a = Port::new(0x70);
+        let mut rtc_b = Port::new(0x71);
+        rtc_a.write(0x8A as u8);
+        let mut prev: u8 = rtc_b.read();
+        print!(".");
+        rtc_a.write(0x8A as u8);
+        rtc_b.write((prev & 0xF0) | 0x0B);
+        rtc_a.write(0x8B as u8);
+        prev = rtc_b.read();
+        print!(".");
+        rtc_a.write(0x8B as u8);
+        rtc_b.write(prev | (0x40 as u8));
+    });
+    println!("done.");
+    subtext!(
+        "{:29}{}",
+        "\r",
+        "Copyright (c) 2023 Brian Szmyd, All rights reserved."
+    );
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
